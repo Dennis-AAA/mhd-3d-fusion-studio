@@ -1,0 +1,2146 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D MHD Analytic Fusion Equilibrium Studio | arXiv:2609.26742 & 2610.07304</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #070b14;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.16);
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 999px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      border: 2px solid #0f172a;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+      transition: transform 0.12s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      background: #7dd3fc;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.4);
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(71, 85, 105, 0.6);
+      border-radius: 3px;
+    }
+    .active-tab {
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(99, 102, 241, 0.25));
+      border-color: rgba(56, 189, 248, 0.6);
+      color: #f8fafc;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-sky-500/30 selection:text-sky-200">
+
+  <!-- Top Header -->
+  <header class="glass-panel sticky top-0 z-30 px-4 py-2.5 border-b border-slate-800/80">
+    <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 via-indigo-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-sky-500/20 font-bold text-white text-sm mono">
+          3D
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-sm sm:text-base font-bold tracking-tight text-white">
+              三维磁流体 (3D MHD) 解析平衡与聚变参数扫描实验室
+            </h1>
+            <span class="px-2 py-0.5 text-[11px] font-medium rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30 mono">
+              Exact Counterexamples to Grad's Conjecture
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400">
+            基于 <a href="https://arxiv.org/abs/2609.26742" target="_blank" rel="noopener" class="text-sky-400 hover:underline">arXiv:2609.26742</a> (Landreman 2026) 与 <a href="https://arxiv.org/abs/2610.07304" target="_blank" rel="noopener" class="text-fuchsia-400 hover:underline">arXiv:2610.07304</a> (Issan, Citrin, Landreman, Tracey 2026) 精确闭式解
+          </p>
+        </div>
+      </div>
+
+      <!-- Family Switcher & Quick Actions -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="inline-flex rounded-lg p-0.5 bg-slate-900/90 border border-slate-800">
+          <button id="btnFamily1" type="button" class="px-3 py-1.5 rounded-md text-xs font-medium transition-all active-tab border border-transparent">
+            族 I：拉伸非对称 Solov'ev 解 (ι = 2)
+          </button>
+          <button id="btnFamily2" type="button" class="px-3 py-1.5 rounded-md text-xs font-medium text-slate-300 hover:text-white transition-all border border-transparent">
+            族 II：复相位椭圆磁剪切解 (ι'(ψ) ≠ 0)
+          </button>
+        </div>
+
+        <button id="btnOpenTheoryModal" type="button" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700 transition flex items-center gap-1.5">
+          <span>解析公式对照</span>
+        </button>
+        <button id="btnExportData" type="button" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 transition flex items-center gap-1.5">
+          <span>导出基准 JSON</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Grid -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto p-3 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+    <!-- Left Column: Parameter Controls & Sweep Engine (4 cols on lg) -->
+    <aside class="lg:col-span-4 xl:col-span-3 flex flex-col gap-3.5">
+
+      <!-- Benchmark Presets -->
+      <section class="glass-panel rounded-xl p-3.5">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-300">论文基准构型预设 (Presets)</h2>
+          <span id="presetBadge" class="text-[11px] mono text-sky-400">Issan Fig. 2(c)</span>
+        </div>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button type="button" data-preset="tokamak" class="preset-btn text-left px-2.5 py-1.5 rounded-lg text-[11px] bg-slate-900/80 hover:bg-slate-800 border border-slate-800 transition">
+            <div class="font-medium text-slate-200">轴对称 Tokamak 极限</div>
+            <div class="text-[10px] text-slate-400 mono">ε=0, τ₀=0 (Solov'ev)</div>
+          </button>
+          <button type="button" data-preset="landreman_fig1" class="preset-btn text-left px-2.5 py-1.5 rounded-lg text-[11px] bg-slate-900/80 hover:bg-slate-800 border border-slate-800 transition">
+            <div class="font-medium text-sky-300">Landreman Fig. 1</div>
+            <div class="text-[10px] text-slate-400 mono">ε=0.5, τ₀=0 (仿星器对称)</div>
+          </button>
+          <button type="button" data-preset="issan_fig2c" class="preset-btn text-left px-2.5 py-1.5 rounded-lg text-[11px] bg-slate-900/80 hover:bg-slate-800 border border-sky-500/40 transition">
+            <div class="font-medium text-fuchsia-300">Issan Fig. 2(c) 破缺</div>
+            <div class="text-[10px] text-slate-400 mono">ε=0.5, τ₀=+0.50 (ι=2)</div>
+          </button>
+          <button type="button" data-preset="issan_fig2a" class="preset-btn text-left px-2.5 py-1.5 rounded-lg text-[11px] bg-slate-900/80 hover:bg-slate-800 border border-slate-800 transition">
+            <div class="font-medium text-fuchsia-300">Issan Fig. 2(a) 反向扭曲</div>
+            <div class="text-[10px] text-slate-400 mono">ε=0.5, τ₀=-0.50 (ι=2)</div>
+          </button>
+          <button type="button" data-preset="landreman_shear" class="preset-btn text-left px-2.5 py-1.5 rounded-lg text-[11px] bg-slate-900/80 hover:bg-slate-800 border border-slate-800 transition">
+            <div class="font-medium text-emerald-300">椭圆磁剪切 (对称)</div>
+            <div class="text-[10px] text-slate-400 mono">ε=1.2, S=1.4, τ₁=0</div>
+          </button>
+          <button type="button" data-preset="issan_fig5c" class="preset-btn text-left px-2.5 py-1.5 rounded-lg text-[11px] bg-slate-900/80 hover:bg-slate-800 border border-slate-800 transition">
+            <div class="font-medium text-amber-300">Issan Fig. 5(c) 剪切破缺</div>
+            <div class="text-[10px] text-slate-400 mono">ε=1.2, S=1.4, τ₁=+0.40</div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Automated Parameter Sweep Animator -->
+      <section class="glass-panel rounded-xl p-3.5 border-l-2 border-l-sky-400">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-white flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" id="sweepStatusDot"></span>
+              <span>平衡参数自动扫描动画 (Parameter Sweep)</span>
+            </h2>
+          </div>
+          <span id="sweepStateLabel" class="text-[11px] mono text-emerald-400">扫描中</span>
+        </div>
+
+        <div class="space-y-2.5">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label for="selectSweepParam" class="block text-[11px] text-slate-400 mb-1">扫描目标参数</label>
+              <select id="selectSweepParam" class="w-full rounded-lg bg-slate-900 border border-slate-700 text-xs px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-sky-500">
+                <option value="tau" selected>对称破缺参数 (τ₀ / τ₁)</option>
+                <option value="epsilon">非轴对称拉长率 (ε)</option>
+                <option value="delta">边界磁通量 (δ)</option>
+                <option value="secondary">辅助几何参数 (S / p_b)</option>
+              </select>
+            </div>
+            <div>
+              <label for="sliderSweepSpeed" class="block text-[11px] text-slate-400 mb-1">
+                扫描速度: <span id="valSweepSpeed" class="mono text-sky-300">1.0x</span>
+              </label>
+              <input id="sliderSweepSpeed" type="range" min="0.2" max="3.0" step="0.1" value="1.0" class="w-full mt-1.5" />
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="btnToggleSweep" type="button" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold bg-sky-500 hover:bg-sky-400 text-slate-950 transition shadow-md shadow-sky-500/20">
+              暂停参数扫描 (Pause Sweep)
+            </button>
+            <button id="btnResetSweep" type="button" class="py-1.5 px-2.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+              重置
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Equilibrium Parameter Sliders -->
+      <section class="glass-panel rounded-xl p-3.5 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-300">三维磁流体平衡参数控制</h2>
+          <span id="boundWarning" class="text-[10px] mono text-emerald-400">正则域内 (Smooth Tori)</span>
+        </div>
+
+        <!-- Epsilon Slider (Shared) -->
+        <div>
+          <div class="flex justify-between text-xs mb-1">
+            <label for="sliderEpsilon" class="text-slate-300 font-medium">非轴对称水平形变参数 <span class="mono text-sky-400">ε</span></label>
+            <span id="valEpsilon" class="mono text-sky-300 font-semibold">0.500</span>
+          </div>
+          <input id="sliderEpsilon" type="range" min="0.00" max="0.85" step="0.01" value="0.50" class="w-full" />
+          <div class="flex justify-between text-[10px] text-slate-500 mt-0.5 mono">
+            <span>0 (Tokamak轴对称)</span>
+            <span id="maxEpsilonLabel">0.85 (强三维仿星器)</span>
+          </div>
+        </div>
+
+        <!-- Family 1 Specific: Tau0 -->
+        <div id="ctrlGroupFamily1" class="space-y-3">
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="sliderTau0" class="text-slate-300 font-medium">仿星器对称破缺参数 <span class="mono text-fuchsia-400">τ₀</span></label>
+              <span id="valTau0" class="mono text-fuchsia-300 font-semibold">0.500</span>
+            </div>
+            <input id="sliderTau0" type="range" min="-0.75" max="0.75" step="0.01" value="0.50" class="w-full" />
+            <div class="flex justify-between text-[10px] text-slate-500 mt-0.5 mono">
+              <span>-0.75 (负向扭曲)</span>
+              <span>0 (Landreman对称)</span>
+              <span>+0.75 (正向扭曲)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Family 2 Specific: Tau1, S, Lambda -->
+        <div id="ctrlGroupFamily2" class="space-y-3 hidden">
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="sliderTau1" class="text-slate-300 font-medium">复相位对称破缺参数 <span class="mono text-fuchsia-400">τ₁</span></label>
+              <span id="valTau1" class="mono text-fuchsia-300 font-semibold">0.400</span>
+            </div>
+            <input id="sliderTau1" type="range" min="-0.65" max="0.65" step="0.01" value="0.40" class="w-full" />
+            <div class="flex justify-between text-[10px] text-slate-500 mt-0.5 mono">
+              <span>-0.65</span>
+              <span>0 (仿星器对称)</span>
+              <span>+0.65</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="sliderS" class="text-slate-300 font-medium">磁轴椭圆面积 <span class="mono text-emerald-400">S</span></label>
+                <span id="valS" class="mono text-emerald-300">1.40</span>
+              </div>
+              <input id="sliderS" type="range" min="0.60" max="2.20" step="0.02" value="1.40" class="w-full" />
+            </div>
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="sliderLambda" class="text-slate-300 font-medium">垂直尺度因子 <span class="mono text-amber-400">λ</span></label>
+                <span id="valLambda" class="mono text-amber-300">1.60</span>
+              </div>
+              <input id="sliderLambda" type="range" min="0.60" max="2.80" step="0.02" value="1.60" class="w-full" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Shared: Boundary Flux Delta & Fraction -->
+        <div>
+          <div class="flex justify-between text-xs mb-1">
+            <label for="sliderDeltaRatio" class="text-slate-300 font-medium">
+              边界磁通量 <span class="mono text-emerald-400">δ</span> (占上限比例)
+            </label>
+            <span id="valDelta" class="mono text-emerald-300 font-semibold">0.0156 (25%)</span>
+          </div>
+          <input id="sliderDeltaRatio" type="range" min="0.05" max="0.88" step="0.01" value="0.25" class="w-full" />
+          <div class="flex justify-between text-[10px] text-slate-500 mt-0.5 mono">
+            <span>细环 (高纵横比)</span>
+            <span id="valDeltaMaxLabel">δ_max = 0.0625</span>
+          </div>
+        </div>
+
+        <!-- Shared: Boundary Pressure pb & Field Line Initial Angle -->
+        <div class="grid grid-cols-2 gap-2.5 pt-1 border-t border-slate-800/80">
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="sliderPb" class="text-slate-300">边界压强 <span class="mono text-sky-400">p_b</span></label>
+              <span id="valPb" class="mono text-slate-300">0.000</span>
+            </div>
+            <input id="sliderPb" type="range" min="0.00" max="0.05" step="0.002" value="0.00" class="w-full" />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="sliderAlpha0" class="text-slate-300">磁力线初相 <span class="mono text-amber-400">α₀</span></label>
+              <span id="valAlpha0" class="mono text-slate-300">0.00 rad</span>
+            </div>
+            <input id="sliderAlpha0" type="range" min="0.00" max="6.28" step="0.05" value="0.00" class="w-full" />
+          </div>
+        </div>
+      </section>
+
+      <!-- 3D Viewport Display & Flow Animation Controls -->
+      <section class="glass-panel rounded-xl p-3.5 space-y-2.5">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-300">三维可视化与流体粒子追踪</h2>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label for="selectColorMode" class="block text-[11px] text-slate-400 mb-1">磁面物理量着色</label>
+            <select id="selectColorMode" class="w-full rounded-lg bg-slate-900 border border-slate-700 text-xs px-2 py-1.5 text-slate-200">
+              <option value="Bmag" selected>磁场强度 |B| (Viridis)</option>
+              <option value="Bz">垂直分量 B_z (对称破缺检验)</option>
+              <option value="pressure">等离子体压强 p(ψ)</option>
+              <option value="tension">磁张力势 Q(x,y,z)</option>
+            </select>
+          </div>
+          <div>
+            <label for="sliderParticleSpeed" class="block text-[11px] text-slate-400 mb-1">
+              Euler 粒子流速: <span id="valParticleSpeed" class="mono text-sky-300">1.2x</span>
+            </label>
+            <input id="sliderParticleSpeed" type="range" min="0.0" max="3.0" step="0.1" value="1.2" class="w-full mt-1.5" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-1.5 pt-1">
+          <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none bg-slate-900/60 px-2.5 py-1.5 rounded-lg border border-slate-800">
+            <input id="chkCutaway" type="checkbox" checked class="rounded text-sky-500 focus:ring-0" />
+            <span>剖面透视嵌套磁面</span>
+          </label>
+          <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none bg-slate-900/60 px-2.5 py-1.5 rounded-lg border border-slate-800">
+            <input id="chkShowFieldLines" type="checkbox" checked class="rounded text-sky-500 focus:ring-0" />
+            <span>显示三维闭合/剪切磁力线</span>
+          </label>
+          <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none bg-slate-900/60 px-2.5 py-1.5 rounded-lg border border-slate-800">
+            <input id="chkShowParticles" type="checkbox" checked class="rounded text-sky-500 focus:ring-0" />
+            <span>磁力线/Euler 流粒子动画</span>
+          </label>
+          <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none bg-slate-900/60 px-2.5 py-1.5 rounded-lg border border-slate-800">
+            <input id="chkAutoRotate" type="checkbox" class="rounded text-sky-500 focus:ring-0" />
+            <span>三维相机自动环绕</span>
+          </label>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Right/Center Area: 3D WebGL Canvas + Live Physics Diagnostics (8 cols on lg) -->
+    <div class="lg:col-span-8 xl:col-span-9 flex flex-col gap-4">
+
+      <!-- Top KPI Strip -->
+      <section class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5">
+        <div class="glass-card rounded-xl p-2.5">
+          <div class="text-[11px] text-slate-400">体积平均比压 ⟨β⟩_V</div>
+          <div id="kpiBetaV" class="text-base sm:text-lg font-bold text-sky-400 mono mt-0.5">3.51%</div>
+          <div id="kpiBetaSub" class="text-[10px] text-slate-500 mono">2⟨p⟩_V / ⟨|B|²⟩_V</div>
+        </div>
+        <div class="glass-card rounded-xl p-2.5">
+          <div class="text-[11px] text-slate-400">包围等离子体体积 V(δ)</div>
+          <div id="kpiVolume" class="text-base sm:text-lg font-bold text-emerald-400 mono mt-0.5">0.412</div>
+          <div id="kpiVolumeSub" class="text-[10px] text-slate-500 mono">2π²√(1-ε²)δ/Ω³</div>
+        </div>
+        <div class="glass-card rounded-xl p-2.5">
+          <div class="text-[11px] text-slate-400">旋转变换 ι(0) → ι(δ)</div>
+          <div id="kpiIota" class="text-base sm:text-lg font-bold text-amber-400 mono mt-0.5">2.000 → 2.000</div>
+          <div id="kpiIotaSub" class="text-[10px] text-slate-500 mono">无磁剪切 (Δι = 0)</div>
+        </div>
+        <div class="glass-card rounded-xl p-2.5">
+          <div class="text-[11px] text-slate-400">体平均磁场 √⟨|B|²⟩_V</div>
+          <div id="kpiBavg" class="text-base sm:text-lg font-bold text-indigo-300 mono mt-0.5">0.944</div>
+          <div id="kpiBavgSub" class="text-[10px] text-slate-500 mono">VMEC volavgB</div>
+        </div>
+        <div class="glass-card rounded-xl p-2.5">
+          <div class="text-[11px] text-slate-400">Hamada 闭合线积分</div>
+          <div id="kpiHamada" class="text-base sm:text-lg font-bold text-fuchsia-300 mono mt-0.5">7.255</div>
+          <div id="kpiHamadaSub" class="text-[10px] text-slate-500 mono">∮ dℓ/|B| = 2π/Ω</div>
+        </div>
+        <div class="glass-card rounded-xl p-2.5">
+          <div class="text-[11px] text-slate-400">仿星器对称破缺度</div>
+          <div id="kpiSymmetry" class="text-base sm:text-lg font-bold text-rose-400 mono mt-0.5">Broken</div>
+          <div id="kpiSymmetrySub" class="text-[10px] text-slate-500 mono">ψ(Sx) ≠ ψ(x)</div>
+        </div>
+      </section>
+
+      <!-- Middle Row: 3D WebGL Viewport + Poloidal Cross-Section Viewer -->
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+
+        <!-- 3D WebGL Interactive Torus Viewport (7 cols) -->
+        <section class="xl:col-span-7 glass-panel rounded-xl p-3 flex flex-col">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <div>
+              <h2 class="text-xs sm:text-sm font-semibold text-white flex items-center gap-2">
+                <span>三维嵌套磁通量面与磁力线实景仿真</span>
+                <span id="viewportFamilyTag" class="text-[10px] px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 mono">N_fp = 2</span>
+              </h2>
+              <p class="text-[11px] text-slate-400">鼠标左键拖拽旋转 · 滚轮缩放 · 右键平移 · 橙色线为磁轴 · 青/品红线为磁力线轨迹</p>
+            </div>
+            <div class="flex items-center gap-1">
+              <button type="button" data-cam="iso" class="cam-btn px-2 py-1 rounded text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">3D 斜视</button>
+              <button type="button" data-cam="top" class="cam-btn px-2 py-1 rounded text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">俯视 (x-y)</button>
+              <button type="button" data-cam="side" class="cam-btn px-2 py-1 rounded text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">侧视 (x-z)</button>
+            </div>
+          </div>
+
+          <div id="threeContainer" class="relative w-full h-[360px] sm:h-[410px] rounded-xl overflow-hidden bg-slate-950 border border-slate-800/90">
+            <!-- Overlay Legend -->
+            <div class="absolute bottom-2.5 left-2.5 right-2.5 flex flex-wrap items-center justify-between gap-2 pointer-events-none text-[11px]">
+              <div class="bg-slate-950/80 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-800 flex items-center gap-3">
+                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>磁轴 (ψ=0)</span>
+                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block"></span>外磁面磁力线</span>
+                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-fuchsia-400 inline-block"></span>内嵌套磁面 (4δ/9, δ/9)</span>
+              </div>
+              <div class="bg-slate-950/80 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-800 flex items-center gap-2">
+                <span id="colorbarTitle" class="mono text-slate-300">|B|</span>
+                <span id="colorbarMin" class="mono text-sky-300">0.62</span>
+                <div class="w-20 h-2 rounded bg-gradient-to-r from-indigo-600 via-emerald-400 to-amber-300"></div>
+                <span id="colorbarMax" class="mono text-amber-300">1.35</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Poloidal Cross-Sections at 4 Toroidal Angles (5 cols) -->
+        <section class="xl:col-span-5 glass-panel rounded-xl p-3 flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h2 class="text-xs sm:text-sm font-semibold text-white">极向截面磁面轮廓 (Poloidal Cross-Sections)</h2>
+              <p class="text-[11px] text-slate-400">复现论文 Fig. 1/2 与 Fig. 4/8：φ = 0, π/4, π/2, 3π/4 处 ψ = δ, 4δ/9, δ/9</p>
+            </div>
+            <span id="symmetryStatusBadge" class="text-[10px] px-2 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30 mono">
+              τ ≠ 0 非对称倾斜
+            </span>
+          </div>
+
+          <div class="relative flex-1 min-h-[300px] sm:min-h-[340px] rounded-xl bg-slate-950 border border-slate-800/90 p-2 flex flex-col">
+            <canvas id="poincareCanvas" class="w-full h-full flex-1"></canvas>
+          </div>
+
+          <div class="mt-2 grid grid-cols-4 gap-1.5 text-[11px] mono text-center">
+            <div class="px-2 py-1 rounded bg-slate-900/90 border border-sky-500/30 text-sky-300">φ = 0 (蓝)</div>
+            <div class="px-2 py-1 rounded bg-slate-900/90 border border-amber-500/30 text-amber-300">φ = π/4 (橙)</div>
+            <div class="px-2 py-1 rounded bg-slate-900/90 border border-emerald-500/30 text-emerald-300">φ = π/2 (绿)</div>
+            <div class="px-2 py-1 rounded bg-slate-900/90 border border-fuchsia-500/30 text-fuchsia-300">φ = 3π/4 (紫)</div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Bottom Row: Parameter Sweep Curves & Rotational Transform / Field Line Profiles -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <!-- Chart 1: Parameter Sweep of Volume V(delta) & Beta_V (Reproducing Fig 3 & Fig 7) -->
+        <section class="glass-panel rounded-xl p-3.5">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h2 class="text-xs sm:text-sm font-semibold text-white">平衡参数扫描曲线：V(δ) 与 ⟨β⟩_V 随对称破缺参数变化</h2>
+              <p class="text-[11px] text-slate-400">复现 arXiv:2610.07304 Fig. 3 (族 I) 与 Fig. 7 (族 II)，圆点指示当前实时工作点</p>
+            </div>
+          </div>
+          <div class="relative h-60 w-full">
+            <canvas id="chartSweepCurve"></canvas>
+          </div>
+        </section>
+
+        <!-- Chart 2: Rotational Transform Profile iota(psi) & Field-Line |B|(zeta) (Reproducing Fig 6) -->
+        <section class="glass-panel rounded-xl p-3.5">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h2 class="text-xs sm:text-sm font-semibold text-white">径向旋转变换剖面 ι(ψ/δ) 与磁力线沿程磁场 |B|(ζ)</h2>
+              <p class="text-[11px] text-slate-400">复现 arXiv:2610.07304 Fig. 6 磁剪切反转现象及 Hamada 等弧长积分特性</p>
+            </div>
+            <div class="inline-flex rounded-md p-0.5 bg-slate-900 border border-slate-800 text-[11px]">
+              <button id="btnProfileIota" type="button" class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-medium">旋转变换 ι(ψ)</button>
+              <button id="btnProfileBline" type="button" class="px-2 py-0.5 rounded text-slate-400 hover:text-slate-200">沿线 |B|(ζ) & p(ψ)</button>
+            </div>
+          </div>
+          <div class="relative h-60 w-full">
+            <canvas id="chartProfiles"></canvas>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Analytical Theory & Equation Inspector Modal -->
+  <div id="theoryModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="glass-panel max-w-3xl w-full max-h-[85vh] rounded-2xl border border-slate-700 shadow-2xl flex flex-col overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 class="text-sm sm:text-base font-bold text-white">三维理想磁流体 (3D Ideal MHD) 精确解析平衡方程对照</h3>
+          <p class="text-xs text-slate-400">Counterexamples to Grad's Conjecture — <a href="https://arxiv.org/abs/2609.26742" target="_blank" rel="noopener" class="text-sky-400 underline">arXiv:2609.26742</a> & <a href="https://arxiv.org/abs/2610.07304" target="_blank" rel="noopener" class="text-fuchsia-400 underline">arXiv:2610.07304</a></p>
+        </div>
+        <button id="btnCloseTheoryModal" type="button" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200">关闭</button>
+      </div>
+      <div class="p-5 overflow-y-auto custom-scroll space-y-4 text-xs leading-relaxed text-slate-300">
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
+          <div class="font-semibold text-sky-300 mb-1">1. 理想磁流体静力学平衡与稳态不可压缩 Euler 流的同构性</div>
+          <p>三维理想磁流体平衡满足 <span class="mono text-white">(∇ × B) × B = ∇p</span> 与 <span class="mono text-white">∇ · B = 0</span>。当磁张力可表为标量势梯度 <span class="mono text-white">(B · ∇)B = -∇Q</span> 时，平衡方程严格等价于具有 Bernoulli 函数 <span class="mono text-white">H = Q + |B|²/2</span> 的三维稳态不可压缩 Euler 流，且压强满足 <span class="mono text-white">∇p = -∇H</span>。这直接推翻了 Harold Grad (1967, 1985) 关于“除对称构型外不存在具有光滑嵌套环面与非常数压强的三维磁流体平衡解族”的著名猜想。</p>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
+          <div class="font-semibold text-fuchsia-300 mb-1">2. 族 I：拉伸非对称 Solov'ev 平衡解 (常旋转变换 ι = 2)</div>
+          <p class="mb-1.5">令水平拉长因子 <span class="mono text-white">a = √(1+ε), b = √(1-ε)</span>，垂直不对称参数 <span class="mono text-white">τ₀ ∈ (-1, 1)</span>，定义 <span class="mono text-white">Ω = √(1-τ₀²)</span> 与 <span class="mono text-white">s = x²/a² + y²/b²</span>：</p>
+          <pre class="mono text-[11px] bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-sky-200 overflow-x-auto">F = √[ 1 - (1 - s)² - 4z² - 4τ₀ s z ] &gt; 0
+B_x = [(2z + τ₀ s)x - (a/b)F y] / s
+B_y = [(2z + τ₀ s)y + (b/a)F x] / s
+B_z = 1 - s - 2τ₀ z
+ψ = (u + Ω²ε/2)² + v²,   p = p_a - 2ψ/Ω²,   V(δ) = 2π²√(1-ε²)δ / Ω³
+β_V = 2(p_b + δ/Ω²) / (1 - Ω²ε²/2 + δ/Ω²),   ∮ dℓ/|B| = 2π/Ω</pre>
+          <p class="mt-1.5 text-slate-400">当 <span class="mono">τ₀ = 0</span> 时退化为 Landreman (arXiv:2609.26742 §2) 的仿星器对称解；当 <span class="mono">τ₀ ≠ 0</span> 时破缺仿星器对称性 (arXiv:2610.07304 §2)，磁轴在水平投影上由圆变为椭圆并产生相位偏移 <span class="mono">γ = arcsin(τ₀)</span>。</p>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
+          <div class="font-semibold text-emerald-300 mb-1">3. 族 II：复相位椭圆坐标磁剪切平衡解 (ι'(ψ) ≠ 0)</div>
+          <p class="mb-1.5">引入复坐标 <span class="mono text-white">ω = x + iy</span>，焦距参数 <span class="mono text-white">ε &gt; 0</span>，径向参数 <span class="mono text-white">S &gt; 0</span>，垂直尺度 <span class="mono text-white">λ &gt; 0</span> 及复相位对称破缺参数 <span class="mono text-white">τ₁ ∈ ℝ</span>：</p>
+          <pre class="mono text-[11px] bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-emerald-200 overflow-x-auto">K = ω̄ √(1 + ε/ω̄²),   Ξ = ωK + π/2 - S + iτ₁,   ν̃(ζ) = (ε/2)sin(2ζ) + τ₁
+B_x + iB_y = i e^(-iλz) sin(Ξ) / (2K),   B_z = Re[e^(-iλz) cos(Ξ)] / λ
+ψ = [sin²(λz) + λ² B_z²] / 2,   p = p_a - ψ/λ²
+dχ/dζ = [√(4σ² + ε²) + ε cos(2ζ)] √[(1 - 2ψ sin²χ) / (cosh²ν̃ - 2ψ)]</pre>
+          <p class="mt-1.5 text-slate-400">当 <span class="mono">τ₁ = 0</span> 时退化为 Landreman (arXiv:2609.26742 §3)；增大 <span class="mono">|τ₁|</span> 不仅破缺仿星器对称性，还会使磁剪切 <span class="mono">ι'(ψ)</span> 由正转负，同时压缩磁面体积并降低 <span class="mono">β_V</span>。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastNotice" class="fixed bottom-4 right-4 z-50 px-4 py-2.5 rounded-xl bg-sky-500 text-slate-950 font-semibold text-xs shadow-xl transition-all duration-300 opacity-0 pointer-events-none translate-y-2">
+    已导出当前三维磁流体平衡基准数据
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. APPLICATION STATE & EXACT ANALYTICAL 3D MHD SOLVER
+    // =========================================================================
+    const state = {
+      family: 1,            // 1: Stretched Asymmetric Solov'ev (iota=2), 2: Sheared Elliptic (iota'(psi)!=0)
+      epsilon: 0.50,        // Non-axisymmetry parameter
+      tau0: 0.50,           // Family 1 symmetry breaking (-0.75 to 0.75)
+      tau1: 0.40,           // Family 2 symmetry breaking (-0.65 to 0.65)
+      S: 1.40,              // Family 2 radial axis parameter
+      lambda: 1.60,         // Family 2 vertical scale parameter
+      deltaRatio: 0.25,     // Fraction of maximum allowed boundary flux delta_max
+      delta: 1 / 64,        // Actual boundary flux delta
+      deltaMax: 1 / 16,     // Upper regularity bound for delta
+      pb: 0.00,             // Boundary pressure p(delta)
+      alpha0: 0.00,         // Initial poloidal angle of highlighted field line
+      colorMode: 'Bmag',    // 'Bmag' | 'Bz' | 'pressure' | 'tension'
+      cutaway: true,        // Cutaway nested flux surfaces
+      showFieldLines: true,
+      showParticles: true,
+      autoRotate: false,
+      particleSpeed: 1.2,
+      sweepActive: true,
+      sweepParam: 'tau',    // 'tau' | 'epsilon' | 'delta' | 'secondary'
+      sweepSpeed: 1.0,
+      sweepDir: 1,
+      profileTab: 'iota',   // 'iota' | 'bline'
+      metrics: {}
+    };
+
+    // Compute maximum smooth domain bound delta_max and update actual delta
+    function updateRegularityBounds() {
+      if (state.family === 1) {
+        const eps = Math.min(state.epsilon, 0.88);
+        const tau0 = Math.max(-0.82, Math.min(0.82, state.tau0));
+        const omega2 = 1.0 - tau0 * tau0;
+        state.deltaMax = 0.25 * Math.pow(1.0 - omega2 * eps, 2);
+        state.delta = Math.max(1e-4, state.deltaRatio * state.deltaMax);
+      } else {
+        const effS = Math.min(state.S, Math.PI / 2);
+        state.deltaMax = 0.5 * Math.pow(Math.sin(effS), 2);
+        state.delta = Math.max(1e-4, state.deltaRatio * state.deltaMax);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // FAMILY 1: Stretched Asymmetric Solov'ev Equilibrium (arXiv:2609.26742 §2 & 2610.07304 §2)
+    // -------------------------------------------------------------------------
+    function evalFamily1Point(psi, alpha, zeta, eps = state.epsilon, tau0 = state.tau0, delta = state.delta, pb = state.pb) {
+      const a = Math.sqrt(1.0 + eps);
+      const b = Math.sqrt(1.0 - eps);
+      const omega2 = Math.max(1e-4, 1.0 - tau0 * tau0);
+      const omega = Math.sqrt(omega2);
+      const zc = -tau0 / (2.0 * omega2);
+      const gamma = Math.asin(Math.max(-0.999, Math.min(0.999, tau0)));
+
+      const ua = -0.5 * omega2 * eps;
+      const rPsi = Math.sqrt(Math.max(0, psi));
+      const u = ua + rPsi * Math.cos(alpha);
+      const v = rPsi * Math.sin(alpha);
+
+      const q2 = Math.min(0.2499, u * u + v * v);
+      const L = Math.sqrt(0.5 * (1.0 + Math.sqrt(Math.max(0, 1.0 - 4.0 * q2))));
+
+      const cosZ = Math.cos(zeta);
+      const sinZ = Math.sin(zeta);
+      const twoZetaGamma = 2.0 * zeta + gamma;
+
+      const x = (a / omega) * (L * cosZ + (u * cosZ + v * sinZ) / L);
+      const y = (b / omega) * (L * sinZ + (v * cosZ - u * sinZ) / L);
+      const z = zc + (v * Math.cos(twoZetaGamma) - u * Math.sin(twoZetaGamma)) / omega2;
+
+      // Exact magnetic field from B = Omega * dr/dzeta
+      const Bx = a * (-L * sinZ + (-u * sinZ + v * cosZ) / L);
+      const By = b * (L * cosZ + (-v * sinZ - u * cosZ) / L);
+      const Bz = (2.0 / omega) * (-v * Math.sin(twoZetaGamma) - u * Math.cos(twoZetaGamma));
+      const Bmag = Math.sqrt(Bx * Bx + By * By + Bz * Bz);
+
+      const Q = 0.5 * omega2 * (x * x + y * y + 4.0 * z * z) + 2.0 * tau0 * z;
+      const pa = pb + (2.0 * delta) / omega2;
+      const p = pa - (2.0 * psi) / omega2;
+
+      return { x, y, z, Bx, By, Bz, Bmag, p, Q, psi };
+    }
+
+    function computeFamily1Globals(eps, tau0, delta, pb) {
+      const omega2 = Math.max(1e-4, 1.0 - tau0 * tau0);
+      const omega = Math.sqrt(omega2);
+      const volume = (2.0 * Math.PI * Math.PI * Math.sqrt(Math.max(0, 1.0 - eps * eps)) * delta) / Math.pow(omega, 3);
+      const avgB2 = 1.0 - 0.5 * omega2 * eps * eps + delta / omega2;
+      const betaV = (2.0 * (pb + delta / omega2)) / avgB2;
+      const hamada = (2.0 * Math.PI) / omega;
+      return {
+        volume,
+        avgB2,
+        volavgB: Math.sqrt(Math.max(0, avgB2)),
+        betaV,
+        hamada,
+        iota0: 2.0,
+        iotaEdge: 2.0
+      };
+    }
+
+    // -------------------------------------------------------------------------
+    // FAMILY 2: Complex-Phase Elliptic Equilibrium with Sheared Iota (arXiv:2609.26742 §3 & 2610.07304 §3)
+    // -------------------------------------------------------------------------
+    function evalFamily2Point(psi, chi, zeta, eps = state.epsilon, S = state.S, lambda = state.lambda, tau1 = state.tau1, delta = state.delta, pb = state.pb) {
+      const k = Math.min(0.999, Math.sqrt(Math.max(0, 2.0 * psi)));
+      const X = -k * Math.cos(chi);
+      const Y = k * Math.sin(chi);
+
+      const nuTilde = 0.5 * eps * Math.sin(2.0 * zeta) + tau1;
+      const coshNu = Math.cosh(nuTilde);
+      const sinhNu = Math.sinh(nuTilde);
+      const tanhNu = Math.tanh(nuTilde);
+
+      const oneMinusY2 = Math.max(1e-7, 1.0 - Y * Y);
+      const cosh2MinusY2 = Math.max(1e-7, coshNu * coshNu - Y * Y);
+      const argArcsin = Math.max(-0.9999, Math.min(0.9999, X / Math.sqrt(cosh2MinusY2)));
+
+      const sigma = Math.max(1e-4, S + Math.atan((tanhNu * Y) / Math.sqrt(oneMinusY2)) - Math.asin(argArcsin));
+      const h = Math.sqrt(4.0 * sigma * sigma + eps * eps);
+      const ac = Math.sqrt(Math.max(0, 0.5 * (h - eps)));
+      const bc = Math.sqrt(Math.max(0, 0.5 * (h + eps)));
+
+      const x = ac * Math.cos(zeta);
+      const y = bc * Math.sin(zeta);
+      const z = -Math.asin(Math.max(-0.9999, Math.min(0.9999, Y))) / lambda;
+
+      const xi = sigma - S;
+      const Fcal = Math.max(0, coshNu * coshNu - Math.pow(Math.sin(xi), 2));
+      const G = 0.5 * (h + eps * Math.cos(2.0 * zeta));
+      const Bxy2 = Fcal / Math.max(1e-6, 4.0 * G);
+      const Bz = X / lambda;
+      const Bmag = Math.sqrt(Bxy2 + Bz * Bz);
+
+      const Q = -0.5 * Bxy2 + (Y * Y) / (2.0 * lambda * lambda);
+      const pa = pb + delta / (lambda * lambda);
+      const p = pa - psi / (lambda * lambda);
+
+      // Approximate horizontal direction for vector visualization
+      const Bx = -Math.sqrt(Bxy2) * Math.sin(zeta);
+      const By = Math.sqrt(Bxy2) * Math.cos(zeta);
+
+      return { x, y, z, Bx, By, Bz, Bmag, p, Q, psi, sigma, h };
+    }
+
+    // RK4 integration of Eq. (21) in arXiv:2610.07304 for field line chi(zeta) and rotational transform iota(psi)
+    function integrateFamily2FieldLine(psi, chi0, nTurns, stepsPerTurn, eps = state.epsilon, S = state.S, tau1 = state.tau1) {
+      const k = Math.min(0.999, Math.sqrt(Math.max(0, 2.0 * psi)));
+      const twoPsi = k * k;
+
+      function dChiDzeta(zeta, chi) {
+        const X = -k * Math.cos(chi);
+        const Y = k * Math.sin(chi);
+        const nuTilde = 0.5 * eps * Math.sin(2.0 * zeta) + tau1;
+        const coshNu = Math.cosh(nuTilde);
+        const tanhNu = Math.tanh(nuTilde);
+        const oneMinusY2 = Math.max(1e-7, 1.0 - Y * Y);
+        const cosh2MinusY2 = Math.max(1e-7, coshNu * coshNu - Y * Y);
+        const argArcsin = Math.max(-0.9999, Math.min(0.9999, X / Math.sqrt(cosh2MinusY2)));
+        const sigma = Math.max(1e-4, S + Math.atan((tanhNu * Y) / Math.sqrt(oneMinusY2)) - Math.asin(argArcsin));
+        const h = Math.sqrt(4.0 * sigma * sigma + eps * eps);
+        const num = Math.max(0, 1.0 - twoPsi * Math.pow(Math.sin(chi), 2));
+        const den = Math.max(1e-6, coshNu * coshNu - twoPsi);
+        return (h + eps * Math.cos(2.0 * zeta)) * Math.sqrt(num / den);
+      }
+
+      const totalSteps = nTurns * stepsPerTurn;
+      const dz = (2.0 * Math.PI * nTurns) / totalSteps;
+      let zeta = 0.0;
+      let chi = chi0;
+      const trajectory = [{ zeta, chi }];
+
+      for (let i = 0; i < totalSteps; i++) {
+        const k1 = dChiDzeta(zeta, chi);
+        const k2 = dChiDzeta(zeta + 0.5 * dz, chi + 0.5 * dz * k1);
+        const k3 = dChiDzeta(zeta + 0.5 * dz, chi + 0.5 * dz * k2);
+        const k4 = dChiDzeta(zeta + dz, chi + dz * k3);
+        chi += (dz / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+        zeta += dz;
+        trajectory.push({ zeta, chi });
+      }
+
+      const iota = (chi - chi0) / (2.0 * Math.PI * nTurns);
+      return { trajectory, iota };
+    }
+
+    // 2D Numerical Quadrature of Section 3.3 (Eq. 64 of arXiv:2609.26742 & Section 3.3 of arXiv:2610.07304)
+    function computeFamily2Globals(eps, S, lambda, tau1, delta, pb) {
+      const kb = Math.min(0.995, Math.sqrt(Math.max(1e-6, 2.0 * delta)));
+      const xiB = Math.asin(kb);
+      const nZeta = 24;
+      const nXi = 18;
+      const dZeta = (2.0 * Math.PI) / nZeta;
+      const dXi = (2.0 * xiB) / nXi;
+
+      let sumU = 0.0;
+      let sumM = 0.0;
+      let sumC = 0.0;
+      let sumA = 0.0;
+
+      for (let iz = 0; iz < nZeta; iz++) {
+        const zeta = (iz + 0.5) * dZeta;
+        const nuTilde = 0.5 * eps * Math.sin(2.0 * zeta) + tau1;
+        const coshNu = Math.cosh(nuTilde);
+        const sinhNu = Math.sinh(nuTilde);
+        const cosh2 = coshNu * coshNu;
+
+        for (let ix = 0; ix < nXi; ix++) {
+          const xi = -xiB + (ix + 0.5) * dXi;
+          const sinXi = Math.sin(xi);
+          const cosXi = Math.cos(xi);
+          const sin2Xi = sinXi * sinXi;
+          const Fcal = Math.max(1e-7, cosh2 - sin2Xi);
+          const ratio = Math.max(0, (kb * kb - sin2Xi) / Fcal);
+          const U = Math.asin(Math.min(0.9999, Math.sqrt(ratio)));
+          const DU = U - 0.5 * Math.sin(2.0 * U);
+
+          const c0_2 = (sin2Xi * cosXi * cosXi) / Fcal;
+          const c1_2 = (cosh2 * sinhNu * sinhNu) / Fcal;
+          const sigma = Math.max(1e-4, S + xi);
+          const h = Math.sqrt(4.0 * sigma * sigma + eps * eps);
+
+          sumU += U;
+          sumM += 2.0 * sin2Xi * U + Fcal * DU;
+          sumC += c0_2 * (2.0 * U - DU) + c1_2 * DU;
+          sumA += (Fcal * U) / h;
+        }
+      }
+
+      const areaElem = dZeta * dXi;
+      const IU = Math.max(1e-8, sumU * areaElem);
+      const volume = IU / lambda;
+      const Mcal = (sumM * areaElem) / (4.0 * IU);
+      const Ccal = (sumC * areaElem) / (2.0 * IU);
+      const Acal = (sumA * areaElem) / (2.0 * IU);
+
+      const avgB2 = Acal + Ccal / (lambda * lambda);
+      const betaV = (2.0 * lambda * lambda * pb + 2.0 * (delta - Mcal)) / (lambda * lambda * Acal + Ccal);
+
+      // Compute on-axis iota(0) and edge iota(delta)
+      const iota0 = integrateFamily2FieldLine(0.0, 0.0, 2, 48, eps, S, tau1).iota;
+      const iotaEdge = integrateFamily2FieldLine(delta, 0.0, 2, 48, eps, S, tau1).iota;
+
+      // Complete elliptic integral of the first kind for Hamada integral on edge surface
+      let ellipSum = 0.0;
+      const nEllip = 32;
+      for (let i = 0; i < nEllip; i++) {
+        const ch = ((i + 0.5) / nEllip) * 2.0 * Math.PI;
+        ellipSum += 1.0 / Math.sqrt(Math.max(1e-5, 1.0 - 2.0 * delta * Math.pow(Math.sin(ch), 2)));
+      }
+      const hamadaPerTurn = ellipSum * ((2.0 * Math.PI) / nEllip);
+
+      return {
+        volume,
+        avgB2,
+        volavgB: Math.sqrt(Math.max(0, avgB2)),
+        betaV,
+        hamada: hamadaPerTurn,
+        iota0,
+        iotaEdge
+      };
+    }
+
+    // Viridis-inspired scientific colormap [0, 1] -> [r, g, b]
+    function scientificColormap(t, mode) {
+      const x = Math.max(0, Math.min(1, t));
+      if (mode === 'Bz') {
+        // Diverging Cool-Warm colormap centered at 0.5
+        if (x < 0.5) {
+          const u = x * 2.0;
+          return [0.15 + 0.75 * u, 0.35 + 0.55 * u, 0.95];
+        } else {
+          const u = (x - 0.5) * 2.0;
+          return [0.95, 0.90 - 0.65 * u, 0.90 - 0.75 * u];
+        }
+      }
+      // Plasma / Viridis hybrid
+      const r = Math.min(1, Math.max(0, 0.12 + 0.88 * Math.pow(x, 1.15)));
+      const g = Math.min(1, Math.max(0, 0.15 + 1.15 * x * (1.0 - 0.35 * x)));
+      const b = Math.min(1, Math.max(0, 0.55 + 0.45 * Math.sin(Math.PI * (1.0 - x * 0.85))));
+      return [r, g, b];
+    }
+
+    // =========================================================================
+    // 2. THREE.JS 3D INTERACTIVE VIEWPORT & PARTICLE FLOW ENGINE
+    // =========================================================================
+    let scene, camera, renderer;
+    let outerSurfaceMesh = null;
+    let innerSurfaceMeshes = [];
+    let axisLine = null;
+    let fieldLinesGroup = null;
+    let particleSystem = null;
+    let particleData = [];
+
+    // Camera spherical orbit state
+    const camSpherical = {
+      radius: 3.4,
+      theta: 0.75,
+      phi: 1.02,
+      targetX: 0,
+      targetY: 0,
+      targetZ: 0,
+      isDragging: false,
+      isPanning: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function initThreeViewport() {
+      const container = document.getElementById('threeContainer');
+      const w = container.clientWidth || 640;
+      const h = container.clientHeight || 400;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x050811);
+
+      camera = new THREE.PerspectiveCamera(42, w / h, 0.05, 100);
+      updateCameraTransform();
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+      renderer.setSize(w, h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      container.insertBefore(renderer.domElement, container.firstChild);
+
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.75);
+      scene.add(ambientLight);
+
+      const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.85);
+      dirLight1.position.set(4, 5, 6);
+      scene.add(dirLight1);
+
+      const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.45);
+      dirLight2.position.set(-5, -4, -3);
+      scene.add(dirLight2);
+
+      // Subtle reference grid in z = -0.75 plane
+      const gridHelper = new THREE.GridHelper(3.6, 18, 0x1e293b, 0x0f172a);
+      gridHelper.rotation.x = Math.PI / 2;
+      gridHelper.position.z = -0.75;
+      scene.add(gridHelper);
+
+      fieldLinesGroup = new THREE.Group();
+      scene.add(fieldLinesGroup);
+
+      // Mouse & Touch Orbit Controls
+      const dom = renderer.domElement;
+      dom.addEventListener('mousedown', (e) => {
+        if (e.button === 2) {
+          camSpherical.isPanning = true;
+        } else {
+          camSpherical.isDragging = true;
+        }
+        camSpherical.lastX = e.clientX;
+        camSpherical.lastY = e.clientY;
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!camSpherical.isDragging && !camSpherical.isPanning) return;
+        const dx = e.clientX - camSpherical.lastX;
+        const dy = e.clientY - camSpherical.lastY;
+        camSpherical.lastX = e.clientX;
+        camSpherical.lastY = e.clientY;
+
+        if (camSpherical.isDragging) {
+          camSpherical.theta -= dx * 0.0075;
+          camSpherical.phi = Math.max(0.12, Math.min(Math.PI - 0.12, camSpherical.phi - dy * 0.0075));
+          updateCameraTransform();
+        } else if (camSpherical.isPanning) {
+          camSpherical.targetX -= dx * 0.003;
+          camSpherical.targetY += dy * 0.003;
+          updateCameraTransform();
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        camSpherical.isDragging = false;
+        camSpherical.isPanning = false;
+      });
+
+      dom.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      dom.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        camSpherical.radius = Math.max(1.2, Math.min(8.5, camSpherical.radius + e.deltaY * 0.002));
+        updateCameraTransform();
+      }, { passive: false });
+
+      // Touch support
+      dom.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          camSpherical.isDragging = true;
+          camSpherical.lastX = e.touches[0].clientX;
+          camSpherical.lastY = e.touches[0].clientY;
+        }
+      }, { passive: true });
+
+      dom.addEventListener('touchmove', (e) => {
+        if (!camSpherical.isDragging || e.touches.length !== 1) return;
+        const dx = e.touches[0].clientX - camSpherical.lastX;
+        const dy = e.touches[0].clientY - camSpherical.lastY;
+        camSpherical.lastX = e.touches[0].clientX;
+        camSpherical.lastY = e.touches[0].clientY;
+        camSpherical.theta -= dx * 0.0075;
+        camSpherical.phi = Math.max(0.12, Math.min(Math.PI - 0.12, camSpherical.phi - dy * 0.0075));
+        updateCameraTransform();
+      }, { passive: true });
+
+      dom.addEventListener('touchend', () => {
+        camSpherical.isDragging = false;
+      });
+    }
+
+    function updateCameraTransform() {
+      if (!camera) return;
+      const r = camSpherical.radius;
+      const sinPhi = Math.sin(camSpherical.phi);
+      camera.position.set(
+        camSpherical.targetX + r * sinPhi * Math.cos(camSpherical.theta),
+        camSpherical.targetY + r * sinPhi * Math.sin(camSpherical.theta),
+        camSpherical.targetZ + r * Math.cos(camSpherical.phi)
+      );
+      camera.up.set(0, 0, 1);
+      camera.lookAt(camSpherical.targetX, camSpherical.targetY, camSpherical.targetZ);
+    }
+
+    // Build parametric flux surface BufferGeometry
+    function buildFluxSurfaceGeometry(psiVal, nZeta, nPol, zetaSpan, colorRange) {
+      const geom = new THREE.BufferGeometry();
+      const positions = [];
+      const colors = [];
+      const indices = [];
+
+      const ptsGrid = [];
+      let minVal = Infinity;
+      let maxVal = -Infinity;
+
+      for (let iz = 0; iz <= nZeta; iz++) {
+        const zeta = (iz / nZeta) * zetaSpan;
+        const row = [];
+        for (let ip = 0; ip <= nPol; ip++) {
+          const ang = (ip / nPol) * 2.0 * Math.PI;
+          const pt = state.family === 1
+            ? evalFamily1Point(psiVal, ang, zeta)
+            : evalFamily2Point(psiVal, ang, zeta);
+
+          let scalar = pt.Bmag;
+          if (state.colorMode === 'Bz') scalar = pt.Bz;
+          else if (state.colorMode === 'pressure') scalar = pt.p;
+          else if (state.colorMode === 'tension') scalar = pt.Q;
+
+          if (scalar < minVal) minVal = scalar;
+          if (scalar > maxVal) maxVal = scalar;
+          row.push({ pt, scalar });
+        }
+        ptsGrid.push(row);
+      }
+
+      const cMin = colorRange ? colorRange.min : minVal;
+      const cMax = colorRange ? colorRange.max : maxVal;
+      const span = Math.max(1e-6, cMax - cMin);
+
+      for (let iz = 0; iz <= nZeta; iz++) {
+        for (let ip = 0; ip <= nPol; ip++) {
+          const item = ptsGrid[iz][ip];
+          positions.push(item.pt.x, item.pt.y, item.pt.z);
+          let norm = (item.scalar - cMin) / span;
+          if (state.colorMode === 'Bz') {
+            const absMax = Math.max(Math.abs(cMin), Math.abs(cMax), 1e-4);
+            norm = 0.5 + 0.5 * (item.scalar / absMax);
+          }
+          const rgb = scientificColormap(norm, state.colorMode);
+          colors.push(rgb[0], rgb[1], rgb[2]);
+        }
+      }
+
+      for (let iz = 0; iz < nZeta; iz++) {
+        for (let ip = 0; ip < nPol; ip++) {
+          const a = iz * (nPol + 1) + ip;
+          const b = (iz + 1) * (nPol + 1) + ip;
+          const c = (iz + 1) * (nPol + 1) + (ip + 1);
+          const d = iz * (nPol + 1) + (ip + 1);
+          indices.push(a, b, d);
+          indices.push(b, c, d);
+        }
+      }
+
+      geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+      geom.setIndex(indices);
+      geom.computeVertexNormals();
+
+      return { geom, minVal: cMin, maxVal: cMax };
+    }
+
+    // Rebuild 3D meshes, magnetic axis, field lines, and tracer particles
+    function update3DSceneGeometry() {
+      if (!scene) return;
+
+      // Clear previous surfaces
+      if (outerSurfaceMesh) {
+        scene.remove(outerSurfaceMesh);
+        outerSurfaceMesh.geometry.dispose();
+        outerSurfaceMesh.material.dispose();
+        outerSurfaceMesh = null;
+      }
+      innerSurfaceMeshes.forEach((m) => {
+        scene.remove(m);
+        m.geometry.dispose();
+        m.material.dispose();
+      });
+      innerSurfaceMeshes = [];
+
+      const outerSpan = state.cutaway ? 1.42 * Math.PI : 2.0 * Math.PI;
+      const outerData = buildFluxSurfaceGeometry(state.delta, 88, 44, outerSpan, null);
+
+      const outerMat = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        roughness: 0.32,
+        metalness: 0.12,
+        side: THREE.DoubleSide,
+        transparent: state.cutaway,
+        opacity: state.cutaway ? 0.92 : 0.98
+      });
+      outerSurfaceMesh = new THREE.Mesh(outerData.geom, outerMat);
+      scene.add(outerSurfaceMesh);
+
+      // Update colorbar legend
+      const titleMap = { Bmag: '|B|', Bz: 'B_z', pressure: 'p(ψ)', tension: 'Q(x)' };
+      document.getElementById('colorbarTitle').textContent = titleMap[state.colorMode] || '|B|';
+      document.getElementById('colorbarMin').textContent = outerData.minVal.toFixed(3);
+      document.getElementById('colorbarMax').textContent = outerData.maxVal.toFixed(3);
+
+      // If cutaway is active, render nested inner flux surfaces (4*delta/9 and delta/9)
+      if (state.cutaway) {
+        const innerFractions = [
+          { psi: (4.0 * state.delta) / 9.0, span: 1.72 * Math.PI, opacity: 0.88 },
+          { psi: state.delta / 9.0, span: 2.0 * Math.PI, opacity: 0.95 }
+        ];
+        innerFractions.forEach((cfg) => {
+          const innerData = buildFluxSurfaceGeometry(cfg.psi, 72, 32, cfg.span, {
+            min: outerData.minVal,
+            max: outerData.maxVal
+          });
+          const mat = new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            roughness: 0.35,
+            metalness: 0.1,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: cfg.opacity
+          });
+          const mesh = new THREE.Mesh(innerData.geom, mat);
+          scene.add(mesh);
+          innerSurfaceMeshes.push(mesh);
+        });
+      }
+
+      // Magnetic Axis (psi = 0)
+      if (axisLine) {
+        scene.remove(axisLine);
+        axisLine.geometry.dispose();
+        axisLine.material.dispose();
+      }
+      const axisPts = [];
+      const nAxis = 160;
+      for (let i = 0; i <= nAxis; i++) {
+        const zeta = (i / nAxis) * 2.0 * Math.PI;
+        const pt = state.family === 1
+          ? evalFamily1Point(0.0, 0.0, zeta)
+          : evalFamily2Point(0.0, 0.0, zeta);
+        axisPts.push(new THREE.Vector3(pt.x, pt.y, pt.z));
+      }
+      const axisGeom = new THREE.BufferGeometry().setFromPoints(axisPts);
+      const axisMat = new THREE.LineBasicMaterial({ color: 0xfbbf24, linewidth: 2 });
+      axisLine = new THREE.Line(axisGeom, axisMat);
+      scene.add(axisLine);
+
+      // 3D Magnetic Field Lines
+      while (fieldLinesGroup.children.length > 0) {
+        const child = fieldLinesGroup.children[0];
+        fieldLinesGroup.remove(child);
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) child.material.dispose();
+      }
+
+      particleData = [];
+      if (state.showFieldLines || state.showParticles) {
+        if (state.family === 1) {
+          // Two closed field lines on psi = delta (at alpha0 and alpha0 + pi)
+          const alphas = [state.alpha0, state.alpha0 + Math.PI];
+          const lineColors = [0x22d3ee, 0xe879f9];
+          alphas.forEach((a0, idx) => {
+            const pts = [];
+            const nSteps = 220;
+            for (let i = 0; i <= nSteps; i++) {
+              const zeta = (i / nSteps) * 2.0 * Math.PI;
+              const p = evalFamily1Point(state.delta, a0, zeta);
+              pts.push(new THREE.Vector3(p.x * 1.004, p.y * 1.004, p.z * 1.004));
+            }
+            if (state.showFieldLines) {
+              const lGeom = new THREE.BufferGeometry().setFromPoints(pts);
+              const lMat = new THREE.LineBasicMaterial({ color: lineColors[idx] });
+              fieldLinesGroup.add(new THREE.Line(lGeom, lMat));
+            }
+            particleData.push(pts);
+          });
+        } else {
+          // Family 2: Integrate field line over 3 toroidal transits (Delta zeta = 6*pi) as in Fig. 5 of arXiv:2610.07304
+          const { trajectory } = integrateFamily2FieldLine(state.delta, state.alpha0, 3, 90);
+          const pts = trajectory.map((step) => {
+            const p = evalFamily2Point(state.delta, step.chi, step.zeta);
+            return new THREE.Vector3(p.x * 1.004, p.y * 1.004, p.z * 1.004);
+          });
+          if (state.showFieldLines) {
+            const lGeom = new THREE.BufferGeometry().setFromPoints(pts);
+            const lMat = new THREE.LineBasicMaterial({ color: 0x22d3ee });
+            fieldLinesGroup.add(new THREE.Line(lGeom, lMat));
+          }
+          particleData.push(pts);
+        }
+      }
+
+      // Initialize / update particle system along field lines
+      rebuildParticleSystem();
+    }
+
+    function rebuildParticleSystem() {
+      if (particleSystem) {
+        scene.remove(particleSystem);
+        particleSystem.geometry.dispose();
+        particleSystem.material.dispose();
+        particleSystem = null;
+      }
+      if (!state.showParticles || particleData.length === 0) return;
+
+      const countPerLine = 28;
+      const totalParticles = particleData.length * countPerLine;
+      const positions = new Float32Array(totalParticles * 3);
+      const colors = new Float32Array(totalParticles * 3);
+
+      for (let l = 0; l < particleData.length; l++) {
+        const c = l === 0 ? [0.22, 0.92, 1.0] : [0.96, 0.45, 0.98];
+        for (let i = 0; i < countPerLine; i++) {
+          const idx = (l * countPerLine + i) * 3;
+          colors[idx] = c[0];
+          colors[idx + 1] = c[1];
+          colors[idx + 2] = c[2];
+        }
+      }
+
+      const pGeom = new THREE.BufferGeometry();
+      pGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      pGeom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+      const pMat = new THREE.PointsMaterial({
+        size: 0.055,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.95
+      });
+
+      particleSystem = new THREE.Points(pGeom, pMat);
+      scene.add(particleSystem);
+    }
+
+    let particlePhase = 0.0;
+    function stepParticles(dt) {
+      if (!particleSystem || !state.showParticles || particleData.length === 0) return;
+      particlePhase = (particlePhase + dt * 0.22 * state.particleSpeed) % 1.0;
+
+      const posAttr = particleSystem.geometry.attributes.position;
+      const countPerLine = 28;
+
+      for (let l = 0; l < particleData.length; l++) {
+        const curve = particleData[l];
+        const maxIdx = curve.length - 1;
+        for (let i = 0; i < countPerLine; i++) {
+          const frac = ((i / countPerLine) + particlePhase) % 1.0;
+          const exactIdx = frac * maxIdx;
+          const i0 = Math.floor(exactIdx);
+          const i1 = Math.min(maxIdx, i0 + 1);
+          const t = exactIdx - i0;
+          const p0 = curve[i0];
+          const p1 = curve[i1];
+
+          const outIdx = (l * countPerLine + i) * 3;
+          posAttr.array[outIdx] = p0.x + (p1.x - p0.x) * t;
+          posAttr.array[outIdx + 1] = p0.y + (p1.y - p0.y) * t;
+          posAttr.array[outIdx + 2] = p0.z + (p1.z - p0.z) * t;
+        }
+      }
+      posAttr.needsUpdate = true;
+    }
+
+    // =========================================================================
+    // 3. POLOIDAL CROSS-SECTION RENDERER (POINCARE SLICES AT PHI = 0, pi/4, pi/2, 3pi/4)
+    // =========================================================================
+    // Given cylindrical angle phi, find zeta such that atan2(y, x) == phi (mod 2pi)
+    function solveZetaForPhi(psi, polAngle, targetPhi) {
+      // Initial guess: since x ~ a cos(zeta), y ~ b sin(zeta), zeta is close to targetPhi
+      let zeta = targetPhi;
+      for (let iter = 0; iter < 6; iter++) {
+        const pt = state.family === 1
+          ? evalFamily1Point(psi, polAngle, zeta)
+          : evalFamily2Point(psi, polAngle, zeta);
+        const phi = Math.atan2(pt.y, pt.x);
+        let diff = phi - targetPhi;
+        while (diff > Math.PI) diff -= 2.0 * Math.PI;
+        while (diff < -Math.PI) diff += 2.0 * Math.PI;
+        if (Math.abs(diff) < 1e-4) break;
+
+        const dz = 1e-3;
+        const pt2 = state.family === 1
+          ? evalFamily1Point(psi, polAngle, zeta + dz)
+          : evalFamily2Point(psi, polAngle, zeta + dz);
+        let dphi = Math.atan2(pt2.y, pt2.x) - phi;
+        while (dphi > Math.PI) dphi -= 2.0 * Math.PI;
+        while (dphi < -Math.PI) dphi += 2.0 * Math.PI;
+        const deriv = dphi / dz;
+        if (Math.abs(deriv) > 1e-3) {
+          zeta -= diff / deriv;
+        }
+      }
+      return zeta;
+    }
+
+    function drawPoloidalCrossSections() {
+      const canvas = document.getElementById('poincareCanvas');
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const width = Math.max(260, Math.floor(rect.width));
+      const height = Math.max(240, Math.floor(rect.height));
+      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+      }
+
+      const ctx = canvas.getContext('2d');
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, width, height);
+
+      const phiSlices = [
+        { phi: 0.0, label: 'φ = 0', color: '#38bdf8' },
+        { phi: 0.25 * Math.PI, label: 'φ = π/4', color: '#fbbf24' },
+        { phi: 0.5 * Math.PI, label: 'φ = π/2', color: '#34d399' },
+        { phi: 0.75 * Math.PI, label: 'φ = 3π/4', color: '#e879f9' }
+      ];
+      const psiLevels = [state.delta, (4.0 * state.delta) / 9.0, state.delta / 9.0];
+
+      // Gather all contour points to compute bounding box in (R, z)
+      let minR = Infinity, maxR = -Infinity, minZ = Infinity, maxZ = -Infinity;
+      const sliceContours = [];
+
+      phiSlices.forEach((slice) => {
+        const contours = [];
+        psiLevels.forEach((psiVal, pIdx) => {
+          const nPts = 48;
+          const pts = [];
+          for (let i = 0; i <= nPts; i++) {
+            const ang = (i / nPts) * 2.0 * Math.PI;
+            const zeta = solveZetaForPhi(psiVal, ang, slice.phi);
+            const pt = state.family === 1
+              ? evalFamily1Point(psiVal, ang, zeta)
+              : evalFamily2Point(psiVal, ang, zeta);
+            const R = Math.sqrt(pt.x * pt.x + pt.y * pt.y);
+            const z = pt.z;
+            if (R < minR) minR = R;
+            if (R > maxR) maxR = R;
+            if (z < minZ) minZ = z;
+            if (z > maxZ) maxZ = z;
+            pts.push({ R, z });
+          }
+          contours.push({ pts, pIdx });
+        });
+
+        // Magnetic axis point at slice.phi
+        const zetaAxis = solveZetaForPhi(0.0, 0.0, slice.phi);
+        const ptAxis = state.family === 1
+          ? evalFamily1Point(0.0, 0.0, zetaAxis)
+          : evalFamily2Point(0.0, 0.0, zetaAxis);
+        const Raxis = Math.sqrt(ptAxis.x * ptAxis.x + ptAxis.y * ptAxis.y);
+        const Zaxis = ptAxis.z;
+
+        sliceContours.push({ slice, contours, axis: { R: Raxis, z: Zaxis } });
+      });
+
+      // Symmetrize z range slightly around 0 or center for clean visual aspect ratio
+      const padLeft = 42, padRight = 16, padTop = 18, padBottom = 30;
+      const plotW = width - padLeft - padRight;
+      const plotH = height - padTop - padBottom;
+
+      const spanR = Math.max(0.25, (maxR - minR) * 1.22);
+      const spanZ = Math.max(0.25, (maxZ - minZ) * 1.25);
+      const cR = 0.5 * (minR + maxR);
+      const cZ = 0.5 * (minZ + maxZ);
+
+      // Preserve 1:1 physical aspect ratio between R and z
+      const scale = Math.min(plotW / spanR, plotH / spanZ);
+      const toScreenX = (R) => padLeft + 0.5 * plotW + (R - cR) * scale;
+      const toScreenY = (z) => padTop + 0.5 * plotH - (z - cZ) * scale;
+
+      // Draw background grid and z = 0 symmetry line
+      ctx.strokeStyle = 'rgba(51, 65, 85, 0.45)';
+      ctx.lineWidth = 1;
+      const nTicks = 5;
+      ctx.font = '10px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#94a3b8';
+
+      for (let i = 0; i <= nTicks; i++) {
+        const rVal = cR - (0.5 * plotW) / scale + (i / nTicks) * (plotW / scale);
+        const sx = toScreenX(rVal);
+        ctx.beginPath();
+        ctx.moveTo(sx, padTop);
+        ctx.lineTo(sx, height - padBottom);
+        ctx.stroke();
+        ctx.fillText(rVal.toFixed(2), sx - 12, height - 10);
+      }
+
+      for (let i = 0; i <= 4; i++) {
+        const zVal = cZ - (0.5 * plotH) / scale + (i / 4) * (plotH / scale);
+        const sy = toScreenY(zVal);
+        ctx.beginPath();
+        ctx.moveTo(padLeft, sy);
+        ctx.lineTo(width - padRight, sy);
+        ctx.stroke();
+        ctx.fillText(zVal.toFixed(2), 6, sy + 3);
+      }
+
+      // Highlight z = 0 horizontal axis
+      const yZero = toScreenY(0.0);
+      if (yZero >= padTop && yZero <= height - padBottom) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.55)';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(padLeft, yZero);
+        ctx.lineTo(width - padRight, yZero);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Draw flux contours for each phi slice
+      sliceContours.forEach(({ slice, contours, axis }) => {
+        contours.forEach(({ pts, pIdx }) => {
+          ctx.save();
+          ctx.strokeStyle = slice.color;
+          ctx.lineWidth = pIdx === 0 ? 2.0 : 1.15;
+          ctx.globalAlpha = pIdx === 0 ? 0.95 : pIdx === 1 ? 0.65 : 0.45;
+          ctx.beginPath();
+          pts.forEach((p, i) => {
+            const sx = toScreenX(p.R);
+            const sy = toScreenY(p.z);
+            if (i === 0) ctx.moveTo(sx, sy);
+            else ctx.lineTo(sx, sy);
+          });
+          ctx.closePath();
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        // Draw magnetic axis marker
+        const ax = toScreenX(axis.R);
+        const ay = toScreenY(axis.z);
+        ctx.fillStyle = slice.color;
+        ctx.beginPath();
+        ctx.arc(ax, ay, 3.2, 0, 2.0 * Math.PI);
+        ctx.fill();
+      });
+
+      // Axis labels
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '11px Inter, sans-serif';
+      ctx.fillText('R = √(x² + y²)', width / 2 - 25, height - 1);
+
+      ctx.restore();
+    }
+
+    // =========================================================================
+    // 4. CHART.JS DIAGNOSTIC CHARTS (SWEEP CURVES & RADIAL PROFILES)
+    // =========================================================================
+    let chartSweep = null;
+    let chartProfiles = null;
+
+    function initDiagnosticCharts() {
+      const ctxSweep = document.getElementById('chartSweepCurve').getContext('2d');
+      chartSweep = new Chart(ctxSweep, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: '体积平均比压 ⟨β⟩_V (%)',
+              data: [],
+              borderColor: '#38bdf8',
+              backgroundColor: 'rgba(56, 189, 248, 0.12)',
+              yAxisID: 'yBeta',
+              tension: 0.3,
+              pointRadius: 0,
+              borderWidth: 2
+            },
+            {
+              label: '包围体积 V(δ)',
+              data: [],
+              borderColor: '#34d399',
+              backgroundColor: 'rgba(52, 211, 153, 0.12)',
+              yAxisID: 'yVol',
+              tension: 0.3,
+              pointRadius: 0,
+              borderWidth: 2
+            },
+            {
+              label: '当前工作点 ⟨β⟩_V',
+              data: [],
+              borderColor: '#f43f5e',
+              backgroundColor: '#f43f5e',
+              yAxisID: 'yBeta',
+              pointRadius: 6,
+              pointHoverRadius: 8,
+              showLine: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              labels: { color: '#cbd5e1', font: { size: 11 } }
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: '对称破缺参数 τ₀', color: '#94a3b8', font: { size: 11 } },
+              ticks: { color: '#94a3b8', maxTicksLimit: 9 },
+              grid: { color: 'rgba(51, 65, 85, 0.3)' }
+            },
+            yBeta: {
+              type: 'linear',
+              position: 'left',
+              title: { display: true, text: '⟨β⟩_V (%)', color: '#38bdf8', font: { size: 11 } },
+              ticks: { color: '#38bdf8' },
+              grid: { color: 'rgba(51, 65, 85, 0.3)' }
+            },
+            yVol: {
+              type: 'linear',
+              position: 'right',
+              title: { display: true, text: '体积 V(δ)', color: '#34d399', font: { size: 11 } },
+              ticks: { color: '#34d399' },
+              grid: { drawOnChartArea: false }
+            }
+          }
+        }
+      });
+
+      const ctxProf = document.getElementById('chartProfiles').getContext('2d');
+      chartProfiles = new Chart(ctxProf, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: '当前构型 ι(ψ/δ)',
+              data: [],
+              borderColor: '#fbbf24',
+              backgroundColor: 'rgba(251, 191, 36, 0.15)',
+              fill: true,
+              tension: 0.3,
+              borderWidth: 2.2,
+              pointRadius: 2
+            },
+            {
+              label: '仿星器对称基准 (τ = 0)',
+              data: [],
+              borderColor: '#94a3b8',
+              borderDash: [5, 4],
+              fill: false,
+              tension: 0.3,
+              borderWidth: 1.5,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          plugins: {
+            legend: {
+              labels: { color: '#cbd5e1', font: { size: 11 } }
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: '归一化磁通 ψ / δ', color: '#94a3b8', font: { size: 11 } },
+              ticks: { color: '#94a3b8', maxTicksLimit: 8 },
+              grid: { color: 'rgba(51, 65, 85, 0.3)' }
+            },
+            y: {
+              title: { display: true, text: '旋转变换 ι(ψ)', color: '#fbbf24', font: { size: 11 } },
+              ticks: { color: '#cbd5e1' },
+              grid: { color: 'rgba(51, 65, 85, 0.3)' }
+            }
+          }
+        }
+      });
+    }
+
+    function updateDiagnosticCharts() {
+      if (!chartSweep || !chartProfiles) return;
+
+      // 1. Update Parameter Sweep Curve (Fig 3 for Family 1, Fig 7 for Family 2)
+      const nPts = 25;
+      const labels = [];
+      const betaArr = [];
+      const volArr = [];
+      const markerArr = [];
+
+      if (state.family === 1) {
+        const tauMin = -0.75, tauMax = 0.75;
+        let closestIdx = 0;
+        let minDiff = Infinity;
+        for (let i = 0; i < nPts; i++) {
+          const tVal = tauMin + (i / (nPts - 1)) * (tauMax - tauMin);
+          labels.push(tVal.toFixed(2));
+          const g = computeFamily1Globals(state.epsilon, tVal, state.delta, state.pb);
+          betaArr.push(+(g.betaV * 100).toFixed(3));
+          volArr.push(+g.volume.toFixed(4));
+          const diff = Math.abs(tVal - state.tau0);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestIdx = i;
+          }
+        }
+        for (let i = 0; i < nPts; i++) {
+          markerArr.push(i === closestIdx ? betaArr[i] : null);
+        }
+        chartSweep.options.scales.x.title.text = '对称破缺参数 τ₀ (arXiv:2610.07304 Fig. 3)';
+      } else {
+        const tauMin = -0.65, tauMax = 0.65;
+        let closestIdx = 0;
+        let minDiff = Infinity;
+        for (let i = 0; i < nPts; i++) {
+          const tVal = tauMin + (i / (nPts - 1)) * (tauMax - tauMin);
+          labels.push(tVal.toFixed(2));
+          const g = computeFamily2Globals(state.epsilon, state.S, state.lambda, tVal, state.delta, state.pb);
+          betaArr.push(+(g.betaV * 100).toFixed(3));
+          volArr.push(+g.volume.toFixed(4));
+          const diff = Math.abs(tVal - state.tau1);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestIdx = i;
+          }
+        }
+        for (let i = 0; i < nPts; i++) {
+          markerArr.push(i === closestIdx ? betaArr[i] : null);
+        }
+        chartSweep.options.scales.x.title.text = '复相位对称破缺参数 τ₁ (arXiv:2610.07304 Fig. 7)';
+      }
+
+      chartSweep.data.labels = labels;
+      chartSweep.data.datasets[0].data = betaArr;
+      chartSweep.data.datasets[1].data = volArr;
+      chartSweep.data.datasets[2].data = markerArr;
+      chartSweep.update();
+
+      // 2. Update Profile Chart (either Rotational Transform iota(psi/delta) or Field-line |B|(zeta))
+      if (state.profileTab === 'iota') {
+        const nRad = 12;
+        const pLabels = [];
+        const iotaCurr = [];
+        const iotaSym = [];
+
+        for (let i = 0; i <= nRad; i++) {
+          const normPsi = i / nRad;
+          const psiVal = normPsi * state.delta;
+          pLabels.push(normPsi.toFixed(2));
+          if (state.family === 1) {
+            iotaCurr.push(2.0);
+            iotaSym.push(2.0);
+          } else {
+            const cur = integrateFamily2FieldLine(psiVal, 0.0, 2, 40, state.epsilon, state.S, state.tau1).iota;
+            const sym = integrateFamily2FieldLine(psiVal, 0.0, 2, 40, state.epsilon, state.S, 0.0).iota;
+            iotaCurr.push(+cur.toFixed(5));
+            iotaSym.push(+sym.toFixed(5));
+          }
+        }
+
+        chartProfiles.data.labels = pLabels;
+        chartProfiles.data.datasets[0].label = state.family === 1 ? '常旋转变换 ι(ψ) = 2' : `当前磁剪切剖面 ι(ψ) (τ₁=${state.tau1.toFixed(2)})`;
+        chartProfiles.data.datasets[0].data = iotaCurr;
+        chartProfiles.data.datasets[1].label = '仿星器对称基准 (τ = 0)';
+        chartProfiles.data.datasets[1].data = iotaSym;
+        chartProfiles.options.scales.x.title.text = '归一化磁通量 ψ / δ';
+        chartProfiles.options.scales.y.title.text = '旋转变换 ι(ψ)';
+        chartProfiles.update();
+      } else {
+        // Show |B|(zeta) along the boundary field line over [0, 2pi]
+        const nZ = 36;
+        const zLabels = [];
+        const bCurr = [];
+        const bAxis = [];
+        for (let i = 0; i <= nZ; i++) {
+          const zeta = (i / nZ) * 2.0 * Math.PI;
+          zLabels.push((zeta / Math.PI).toFixed(2) + 'π');
+          const ptEdge = state.family === 1
+            ? evalFamily1Point(state.delta, state.alpha0, zeta)
+            : evalFamily2Point(state.delta, state.alpha0, zeta);
+          const ptAx = state.family === 1
+            ? evalFamily1Point(0.0, 0.0, zeta)
+            : evalFamily2Point(0.0, 0.0, zeta);
+          bCurr.push(+ptEdge.Bmag.toFixed(4));
+          bAxis.push(+ptAx.Bmag.toFixed(4));
+        }
+        chartProfiles.data.labels = zLabels;
+        chartProfiles.data.datasets[0].label = '边界磁面 |B|(ζ) (ψ = δ)';
+        chartProfiles.data.datasets[0].data = bCurr;
+        chartProfiles.data.datasets[1].label = '磁轴沿程 |B|(ζ) (ψ = 0)';
+        chartProfiles.data.datasets[1].data = bAxis;
+        chartProfiles.options.scales.x.title.text = '环向场线角坐标 ζ (rad)';
+        chartProfiles.options.scales.y.title.text = '磁场模长 |B|';
+        chartProfiles.update();
+      }
+    }
+
+    // =========================================================================
+    // 5. KPI & UI SYNCHRONIZATION
+    // =========================================================================
+    function refreshSimulation() {
+      updateRegularityBounds();
+
+      // Update slider readouts
+      document.getElementById('valEpsilon').textContent = state.epsilon.toFixed(3);
+      document.getElementById('valTau0').textContent = state.tau0.toFixed(3);
+      document.getElementById('valTau1').textContent = state.tau1.toFixed(3);
+      document.getElementById('valS').textContent = state.S.toFixed(2);
+      document.getElementById('valLambda').textContent = state.lambda.toFixed(2);
+      document.getElementById('valDelta').textContent = `${state.delta.toFixed(4)} (${Math.round(state.deltaRatio * 100)}%)`;
+      document.getElementById('valDeltaMaxLabel').textContent = `δ_max = ${state.deltaMax.toFixed(4)}`;
+      document.getElementById('valPb').textContent = state.pb.toFixed(3);
+      document.getElementById('valAlpha0').textContent = `${state.alpha0.toFixed(2)} rad`;
+
+      // Compute globals
+      const g = state.family === 1
+        ? computeFamily1Globals(state.epsilon, state.tau0, state.delta, state.pb)
+        : computeFamily2Globals(state.epsilon, state.S, state.lambda, state.tau1, state.delta, state.pb);
+      state.metrics = g;
+
+      // Update KPI cards
+      document.getElementById('kpiBetaV').textContent = `${(g.betaV * 100).toFixed(2)}%`;
+      document.getElementById('kpiVolume').textContent = g.volume.toFixed(4);
+      document.getElementById('kpiVolumeSub').textContent = state.family === 1
+        ? '2π²√(1-ε²)δ / Ω³'
+        : 'I[U] / λ (2D椭圆积分)';
+
+      const deltaIota = g.iotaEdge - g.iota0;
+      document.getElementById('kpiIota').textContent = `${g.iota0.toFixed(3)} → ${g.iotaEdge.toFixed(3)}`;
+      document.getElementById('kpiIotaSub').textContent = state.family === 1
+        ? '全局整数旋转变换 ι = 2'
+        : `磁剪切 Δι = ${deltaIota >= 0 ? '+' : ''}${deltaIota.toFixed(4)}`;
+
+      document.getElementById('kpiBavg').textContent = g.volavgB.toFixed(4);
+      document.getElementById('kpiHamada').textContent = g.hamada.toFixed(4);
+      document.getElementById('kpiHamadaSub').textContent = state.family === 1
+        ? '∮ dℓ/|B| = 2π/Ω (恒定)'
+        : '第一类完全椭圆积分 (满足Hamada)';
+
+      const activeTau = state.family === 1 ? state.tau0 : state.tau1;
+      const isSymmetric = Math.abs(activeTau) < 1e-3;
+      const symEl = document.getElementById('kpiSymmetry');
+      const symSub = document.getElementById('kpiSymmetrySub');
+      const symBadge = document.getElementById('symmetryStatusBadge');
+
+      if (isSymmetric) {
+        symEl.textContent = 'Symmetric';
+        symEl.className = 'text-base sm:text-lg font-bold text-emerald-400 mono mt-0.5';
+        symSub.textContent = 'ψ(R,-φ,-z) = ψ(R,φ,z)';
+        symBadge.textContent = 'τ = 0 仿星器对称 (Landreman)';
+        symBadge.className = 'text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mono';
+      } else {
+        symEl.textContent = `Broken (${activeTau >= 0 ? '+' : ''}${activeTau.toFixed(2)})`;
+        symEl.className = 'text-base sm:text-lg font-bold text-fuchsia-400 mono mt-0.5';
+        symSub.textContent = 'ψ(R,-φ,-z) ≠ ψ(R,φ,z)';
+        symBadge.textContent = `τ = ${activeTau.toFixed(2)} 对称破缺 (Issan et al.)`;
+        symBadge.className = 'text-[10px] px-2 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30 mono';
+      }
+
+      document.getElementById('viewportFamilyTag').textContent = state.family === 1
+        ? '族 I: Solov\'ev 拉伸 (ι = 2)'
+        : '族 II: 复相位椭圆磁剪切';
+
+      update3DSceneGeometry();
+      drawPoloidalCrossSections();
+      updateDiagnosticCharts();
+    }
+
+    function switchFamily(fam) {
+      state.family = fam;
+      const btn1 = document.getElementById('btnFamily1');
+      const btn2 = document.getElementById('btnFamily2');
+      const grp1 = document.getElementById('ctrlGroupFamily1');
+      const grp2 = document.getElementById('ctrlGroupFamily2');
+      const epsSlider = document.getElementById('sliderEpsilon');
+
+      if (fam === 1) {
+        btn1.classList.add('active-tab');
+        btn2.classList.remove('active-tab');
+        grp1.classList.remove('hidden');
+        grp2.classList.add('hidden');
+        epsSlider.max = '0.85';
+        if (state.epsilon > 0.85) {
+          state.epsilon = 0.50;
+          epsSlider.value = '0.50';
+        }
+        document.getElementById('maxEpsilonLabel').textContent = '0.85 (强三维仿星器)';
+      } else {
+        btn2.classList.add('active-tab');
+        btn1.classList.remove('active-tab');
+        grp2.classList.remove('hidden');
+        grp1.classList.add('hidden');
+        epsSlider.max = '2.20';
+        document.getElementById('maxEpsilonLabel').textContent = '2.20 (椭圆焦点参数)';
+      }
+      refreshSimulation();
+    }
+
+    function applyPreset(presetKey) {
+      const badge = document.getElementById('presetBadge');
+      if (presetKey === 'tokamak') {
+        state.family = 1;
+        state.epsilon = 0.00;
+        state.tau0 = 0.00;
+        state.deltaRatio = 0.25;
+        state.pb = 0.00;
+        badge.textContent = 'Solov\'ev Axisymmetric';
+      } else if (presetKey === 'landreman_fig1') {
+        state.family = 1;
+        state.epsilon = 0.50;
+        state.tau0 = 0.00;
+        state.deltaRatio = 0.25; // delta = 1/64 when eps=0.5, tau0=0
+        state.pb = 0.00;
+        badge.textContent = 'Landreman Fig. 1';
+      } else if (presetKey === 'issan_fig2c') {
+        state.family = 1;
+        state.epsilon = 0.50;
+        state.tau0 = 0.50;
+        state.deltaRatio = 0.16;
+        state.pb = 0.00;
+        badge.textContent = 'Issan Fig. 2(c)';
+      } else if (presetKey === 'issan_fig2a') {
+        state.family = 1;
+        state.epsilon = 0.50;
+        state.tau0 = -0.50;
+        state.deltaRatio = 0.16;
+        state.pb = 0.00;
+        badge.textContent = 'Issan Fig. 2(a)';
+      } else if (presetKey === 'landreman_shear') {
+        state.family = 2;
+        state.epsilon = 1.20;
+        state.S = 1.40;
+        state.lambda = 1.60;
+        state.tau1 = 0.00;
+        state.deltaRatio = 0.29; // delta ~ 0.14
+        state.pb = 0.00;
+        badge.textContent = 'Landreman Sheared';
+      } else if (presetKey === 'issan_fig5c') {
+        state.family = 2;
+        state.epsilon = 1.20;
+        state.S = 1.40;
+        state.lambda = 1.60;
+        state.tau1 = 0.40;
+        state.deltaRatio = 0.29; // delta ~ 0.14
+        state.pb = 0.00;
+        badge.textContent = 'Issan Fig. 5(c)';
+      }
+
+      // Sync DOM sliders
+      document.getElementById('sliderEpsilon').value = state.epsilon;
+      document.getElementById('sliderTau0').value = state.tau0;
+      document.getElementById('sliderTau1').value = state.tau1;
+      document.getElementById('sliderS').value = state.S;
+      document.getElementById('sliderLambda').value = state.lambda;
+      document.getElementById('sliderDeltaRatio').value = state.deltaRatio;
+      document.getElementById('sliderPb').value = state.pb;
+
+      switchFamily(state.family);
+    }
+
+    // =========================================================================
+    // 6. EVENT LISTENERS & MAIN ANIMATION LOOP
+    // =========================================================================
+    function bindUIEvents() {
+      document.getElementById('btnFamily1').addEventListener('click', () => switchFamily(1));
+      document.getElementById('btnFamily2').addEventListener('click', () => switchFamily(2));
+
+      document.querySelectorAll('.preset-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.sweepActive = false;
+          updateSweepToggleUI();
+          applyPreset(btn.getAttribute('data-preset'));
+        });
+      });
+
+      const stopSweepOnManualInput = () => {
+        if (state.sweepActive) {
+          state.sweepActive = false;
+          updateSweepToggleUI();
+        }
+      };
+
+      document.getElementById('sliderEpsilon').addEventListener('input', (e) => {
+        stopSweepOnManualInput();
+        state.epsilon = parseFloat(e.target.value);
+        refreshSimulation();
+      });
+
+      document.getElementById('sliderTau0').addEventListener('input', (e) => {
+        stopSweepOnManualInput();
+        state.tau0 = parseFloat(e.target.value);
+        refreshSimulation();
+      });
+
+      document.getElementById('sliderTau1').addEventListener('input', (e) => {
+        stopSweepOnManualInput();
+        state.tau1 = parseFloat(e.target.value);
+        refreshSimulation();
+      });
+
+      document.getElementById('sliderS').addEventListener('input', (e) => {
+        stopSweepOnManualInput();
+        state.S = parseFloat(e.target.value);
+        refreshSimulation();
+      });
+
+      document.getElementById('sliderLambda').addEventListener('input', (e) => {
+        stopSweepOnManualInput();
+        state.lambda = parseFloat(e.target.value);
+        refreshSimulation();
+      });
+
+      document.getElementById('sliderDeltaRatio').addEventListener('input', (e) => {
+        stopSweepOnManualInput();
+        state.deltaRatio = parseFloat(e.target.value);
+        refreshSimulation();
+      });
+
+      document.getElementById('sliderPb').addEventListener('input', (e) => {
+        stopSweepOnManualInput();
+        state.pb = parseFloat(e.target.value);
+        refreshSimulation();
+      });
+
+      document.getElementById('sliderAlpha0').addEventListener('input', (e) => {
+        state.alpha0 = parseFloat(e.target.value);
+        refreshSimulation();
+      });
+
+      document.getElementById('selectColorMode').addEventListener('change', (e) => {
+        state.colorMode = e.target.value;
+        refreshSimulation();
+      });
+
+      document.getElementById('sliderParticleSpeed').addEventListener('input', (e) => {
+        state.particleSpeed = parseFloat(e.target.value);
+        document.getElementById('valParticleSpeed').textContent = `${state.particleSpeed.toFixed(1)}x`;
+      });
+
+      document.getElementById('chkCutaway').addEventListener('change', (e) => {
+        state.cutaway = e.target.checked;
+        refreshSimulation();
+      });
+
+      document.getElementById('chkShowFieldLines').addEventListener('change', (e) => {
+        state.showFieldLines = e.target.checked;
+        refreshSimulation();
+      });
+
+      document.getElementById('chkShowParticles').addEventListener('change', (e) => {
+        state.showParticles = e.target.checked;
+        refreshSimulation();
+      });
+
+      document.getElementById('chkAutoRotate').addEventListener('change', (e) => {
+        state.autoRotate = e.target.checked;
+      });
+
+      // Camera view presets
+      document.querySelectorAll('.cam-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const mode = btn.getAttribute('data-cam');
+          camSpherical.targetX = 0;
+          camSpherical.targetY = 0;
+          camSpherical.targetZ = 0;
+          if (mode === 'iso') {
+            camSpherical.radius = 3.4;
+            camSpherical.theta = 0.75;
+            camSpherical.phi = 1.02;
+          } else if (mode === 'top') {
+            camSpherical.radius = 3.6;
+            camSpherical.theta = 0.0;
+            camSpherical.phi = 0.12;
+          } else if (mode === 'side') {
+            camSpherical.radius = 3.3;
+            camSpherical.theta = -0.5 * Math.PI;
+            camSpherical.phi = 0.5 * Math.PI;
+          }
+          updateCameraTransform();
+        });
+      });
+
+      // Parameter Sweep Controls
+      document.getElementById('selectSweepParam').addEventListener('change', (e) => {
+        state.sweepParam = e.target.value;
+      });
+
+      document.getElementById('sliderSweepSpeed').addEventListener('input', (e) => {
+        state.sweepSpeed = parseFloat(e.target.value);
+        document.getElementById('valSweepSpeed').textContent = `${state.sweepSpeed.toFixed(1)}x`;
+      });
+
+      document.getElementById('btnToggleSweep').addEventListener('click', () => {
+        state.sweepActive = !state.sweepActive;
+        updateSweepToggleUI();
+      });
+
+      document.getElementById('btnResetSweep').addEventListener('click', () => {
+        applyPreset(state.family === 1 ? 'issan_fig2c' : 'issan_fig5c');
+      });
+
+      // Profile Chart Tabs
+      document.getElementById('btnProfileIota').addEventListener('click', () => {
+        state.profileTab = 'iota';
+        document.getElementById('btnProfileIota').className = 'px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-medium';
+        document.getElementById('btnProfileBline').className = 'px-2 py-0.5 rounded text-slate-400 hover:text-slate-200';
+        updateDiagnosticCharts();
+      });
+
+      document.getElementById('btnProfileBline').addEventListener('click', () => {
+        state.profileTab = 'bline';
+        document.getElementById('btnProfileBline').className = 'px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-medium';
+        document.getElementById('btnProfileIota').className = 'px-2 py-0.5 rounded text-slate-400 hover:text-slate-200';
+        updateDiagnosticCharts();
+      });
+
+      // Theory Modal
+      const modal = document.getElementById('theoryModal');
+      document.getElementById('btnOpenTheoryModal').addEventListener('click', () => {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      });
+      document.getElementById('btnCloseTheoryModal').addEventListener('click', () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      });
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+        }
+      });
+
+      // Export Benchmark JSON
+      document.getElementById('btnExportData').addEventListener('click', () => {
+        const payload = {
+          papers: ['arXiv:2609.26742', 'arXiv:2610.07304'],
+          family: state.family === 1 ? 'Stretched_Asymmetric_Solovev_iota_2' : 'Complex_Phase_Elliptic_Sheared_iota',
+          parameters: {
+            epsilon: state.epsilon,
+            tau0: state.family === 1 ? state.tau0 : null,
+            tau1: state.family === 2 ? state.tau1 : null,
+            S: state.family === 2 ? state.S : null,
+            lambda: state.family === 2 ? state.lambda : null,
+            delta: state.delta,
+            deltaMax: state.deltaMax,
+            pb: state.pb
+          },
+          benchmarks: state.metrics,
+          timestamp: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `mhd_3d_equilibrium_family${state.family}_benchmark.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        const toast = document.getElementById('toastNotice');
+        toast.classList.remove('opacity-0', 'translate-y-2');
+        setTimeout(() => {
+          toast.classList.add('opacity-0', 'translate-y-2');
+        }, 2400);
+      });
+
+      window.addEventListener('resize', () => {
+        const container = document.getElementById('threeContainer');
+        if (container && renderer && camera) {
+          const w = container.clientWidth || 640;
+          const h = container.clientHeight || 400;
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+          renderer.setSize(w, h);
+        }
+        drawPoloidalCrossSections();
+      });
+    }
+
+    function updateSweepToggleUI() {
+      const btn = document.getElementById('btnToggleSweep');
+      const dot = document.getElementById('sweepStatusDot');
+      const lbl = document.getElementById('sweepStateLabel');
+      if (state.sweepActive) {
+        btn.textContent = '暂停参数扫描 (Pause Sweep)';
+        btn.className = 'flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold bg-sky-500 hover:bg-sky-400 text-slate-950 transition shadow-md shadow-sky-500/20';
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+        lbl.textContent = '扫描中';
+        lbl.className = 'text-[11px] mono text-emerald-400';
+      } else {
+        btn.textContent = '启动参数扫描 (Start Sweep)';
+        btn.className = 'flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition shadow-md shadow-emerald-500/20';
+        dot.className = 'w-2 h-2 rounded-full bg-slate-500';
+        lbl.textContent = '已暂停';
+        lbl.className = 'text-[11px] mono text-slate-400';
+      }
+    }
+
+    let lastFrameTime = performance.now();
+    let sweepAccum = 0.0;
+
+    function animateLoop(now) {
+      requestAnimationFrame(animateLoop);
+      const dt = Math.min(0.05, (now - lastFrameTime) / 1000.0);
+      lastFrameTime = now;
+
+      // 1. Parameter sweep animation (throttled to ~20 Hz so 3D mesh & charts stay silky smooth)
+      if (state.sweepActive) {
+        sweepAccum += dt;
+        if (sweepAccum >= 0.045) {
+          const stepDt = sweepAccum * state.sweepSpeed;
+          sweepAccum = 0.0;
+
+          if (state.sweepParam === 'tau') {
+            if (state.family === 1) {
+              state.tau0 += state.sweepDir * 0.32 * stepDt;
+              if (state.tau0 >= 0.70) { state.tau0 = 0.70; state.sweepDir = -1; }
+              if (state.tau0 <= -0.70) { state.tau0 = -0.70; state.sweepDir = 1; }
+              document.getElementById('sliderTau0').value = state.tau0;
+            } else {
+              state.tau1 += state.sweepDir * 0.28 * stepDt;
+              if (state.tau1 >= 0.60) { state.tau1 = 0.60; state.sweepDir = -1; }
+              if (state.tau1 <= -0.60) { state.tau1 = -0.60; state.sweepDir = 1; }
+              document.getElementById('sliderTau1').value = state.tau1;
+            }
+          } else if (state.sweepParam === 'epsilon') {
+            const maxEps = state.family === 1 ? 0.80 : 2.00;
+            state.epsilon += state.sweepDir * 0.35 * stepDt;
+            if (state.epsilon >= maxEps) { state.epsilon = maxEps; state.sweepDir = -1; }
+            if (state.epsilon <= 0.02) { state.epsilon = 0.02; state.sweepDir = 1; }
+            document.getElementById('sliderEpsilon').value = state.epsilon;
+          } else if (state.sweepParam === 'delta') {
+            state.deltaRatio += state.sweepDir * 0.28 * stepDt;
+            if (state.deltaRatio >= 0.82) { state.deltaRatio = 0.82; state.sweepDir = -1; }
+            if (state.deltaRatio <= 0.08) { state.deltaRatio = 0.08; state.sweepDir = 1; }
+            document.getElementById('sliderDeltaRatio').value = state.deltaRatio;
+          } else if (state.sweepParam === 'secondary') {
+            if (state.family === 2) {
+              state.S += state.sweepDir * 0.35 * stepDt;
+              if (state.S >= 2.10) { state.S = 2.10; state.sweepDir = -1; }
+              if (state.S <= 0.70) { state.S = 0.70; state.sweepDir = 1; }
+              document.getElementById('sliderS').value = state.S;
+            } else {
+              state.pb += state.sweepDir * 0.02 * stepDt;
+              if (state.pb >= 0.045) { state.pb = 0.045; state.sweepDir = -1; }
+              if (state.pb <= 0.0) { state.pb = 0.0; state.sweepDir = 1; }
+              document.getElementById('sliderPb').value = state.pb;
+            }
+          }
+          refreshSimulation();
+        }
+      }
+
+      // 2. Camera auto-orbit
+      if (state.autoRotate && !camSpherical.isDragging) {
+        camSpherical.theta += dt * 0.35;
+        updateCameraTransform();
+      }
+
+      // 3. Step plasma / Euler flow particles along field lines
+      stepParticles(dt);
+
+      // 4. Render 3D scene
+      if (renderer && scene && camera) {
+        renderer.render(scene, camera);
+      }
+    }
+
+    window.addEventListener('load', () => {
+      initThreeViewport();
+      initDiagnosticCharts();
+      bindUIEvents();
+      refreshSimulation();
+      requestAnimationFrame(animateLoop);
+    });
+  </script>
+</body>
+</html>
